@@ -453,6 +453,7 @@ fieldset.field legend{padding:0;margin-bottom:8px}
     <li><figure class="print"><img src="assets/foto-2.webp" alt="Romeo bebé en su tina de baño" loading="lazy" style="object-position:50% 25%"></figure></li>
     <li><figure class="print"><img src="assets/foto-3.webp" alt="Romeo bebé sonriendo, sentado en la cama" loading="lazy" style="object-position:50% 28%"></figure></li>
     <li><figure class="print"><img src="assets/foto-4.webp" alt="Romeo jugando con un balón de soccer" loading="lazy" style="object-position:50% 30%"></figure></li>
+    <li><figure class="print"><img src="assets/foto-regalo.webp" alt="Romeo bebé con un moño azul de regalo en la cabeza" loading="lazy" style="object-position:50% 35%"></figure></li>
     <li><figure class="print"><img src="assets/foto-5.webp" alt="Romeo sonriendo, sentado en la arena de la playa" loading="lazy" style="object-position:50% 40%"></figure></li>
     <li><figure class="print"><img src="assets/foto-6.webp" alt="Romeo enterrado en la arena, riendo" loading="lazy" style="object-position:50% 35%"></figure></li>
     <li><figure class="print"><img src="assets/foto-7.webp" alt="Romeo muy elegante con chaleco y moño" loading="lazy" style="object-position:50% 40%"></figure></li>
@@ -462,7 +463,7 @@ fieldset.field legend{padding:0;margin-bottom:8px}
   <div class="wrap">
     <div class="album__hd" style="justify-content:center;gap:18px;align-items:center">
       <button class="round-btn" id="prev" type="button" aria-label="Foto anterior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
-      <p class="album__count" id="albCount" aria-live="polite">1 / 9</p>
+      <p class="album__count" id="albCount" aria-live="polite">1 / 10</p>
       <button class="round-btn" id="next" type="button" aria-label="Foto siguiente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
     </div>
   </div>
@@ -660,38 +661,11 @@ fieldset.field legend{padding:0;margin-bottom:8px}
     host.innerHTML = h;
   });
 
-  /* ---------- Roar (synthesized, plays only after the tap) ---------- */
-  function roar() {
-    try {
-      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-      const ctx = new AC(); const t = ctx.currentTime + .08, D = 1.9;
-      const master = ctx.createGain();
-      master.gain.setValueAtTime(.0001, t);
-      master.gain.exponentialRampToValueAtTime(.6, t + .14);
-      master.gain.setValueAtTime(.6, t + .85);
-      master.gain.exponentialRampToValueAtTime(.0001, t + D);
-      const am = ctx.createGain(); am.gain.value = .75;
-      const amL = ctx.createOscillator(); amL.frequency.value = 28; const amG = ctx.createGain(); amG.gain.value = .25; amL.connect(amG).connect(am.gain);
-      const shaper = ctx.createWaveShaper(); const curve = new Float32Array(1024);
-      for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; curve[i] = Math.tanh(x * 4); } shaper.curve = curve;
-      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 1.3;
-      lp.frequency.setValueAtTime(600, t); lp.frequency.linearRampToValueAtTime(1500, t + .35); lp.frequency.exponentialRampToValueAtTime(350, t + D);
-      [52, 55.5, 78].forEach((f, i) => {
-        const o = ctx.createOscillator(); o.type = "sawtooth";
-        o.frequency.setValueAtTime(f * .8, t); o.frequency.linearRampToValueAtTime(f * 1.25, t + .3); o.frequency.exponentialRampToValueAtTime(f * .65, t + D);
-        const l = ctx.createOscillator(); l.frequency.value = 19 + i * 6; const lg = ctx.createGain(); lg.gain.value = f * .14; l.connect(lg).connect(o.frequency);
-        const g = ctx.createGain(); g.gain.value = .32; o.connect(g).connect(shaper);
-        o.start(t); l.start(t); o.stop(t + D); l.stop(t + D);
-      });
-      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * D), ctx.sampleRate), ch = buf.getChannelData(0);
-      for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
-      const ns = ctx.createBufferSource(); ns.buffer = buf;
-      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 850; bp.Q.value = .7;
-      const ng = ctx.createGain(); ng.gain.value = .55; ns.connect(bp).connect(ng).connect(lp);
-      shaper.connect(lp); lp.connect(am).connect(master).connect(ctx.destination);
-      ns.start(t); amL.start(t); amL.stop(t + D);
-      setTimeout(() => ctx.close(), (D + .5) * 1000);
-    } catch (e) {}
+  /* ---------- Intro music (plays only after the tap) ---------- */
+  const intro = new Audio("assets/intro.mp3");
+  intro.preload = "auto";
+  function playIntro() {
+    try { intro.currentTime = 0; intro.volume = .9; const pr = intro.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
   }
 
   /* ---------- Opening sequence ---------- */
@@ -712,7 +686,7 @@ fieldset.field legend{padding:0;margin-bottom:8px}
   }
   openBtn.addEventListener("click", () => {
     if (opened) return; opened = true;
-    roar();
+    playIntro();
     if (RM.matches) { cover.classList.add("is-fading"); setTimeout(finishOpen, 300); return; }
     cover.classList.add("is-opening");
     flash.classList.add("on");
