@@ -661,11 +661,59 @@ fieldset.field legend{padding:0;margin-bottom:8px}
     host.innerHTML = h;
   });
 
-  /* ---------- Intro music (plays only after the tap) ---------- */
+  /* ---------- Intro music + T-Rex roar (sound only after the guest taps) ---------- */
   const intro = new Audio("assets/intro.mp3");
   intro.preload = "auto";
+  let actx = null, roared = false;
+  function unlockAudio() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC && !actx) actx = new AC();
+      if (actx && actx.state === "suspended") actx.resume();
+    } catch (e) { actx = null; }
+  }
   function playIntro() {
+    unlockAudio();
     try { intro.currentTime = 0; intro.volume = .9; const pr = intro.play(); if (pr && pr.catch) pr.catch(() => {}); } catch (e) {}
+  }
+  function roar() {
+    if (roared || !actx) return; roared = true;
+    try {
+      const ctx = actx; if (ctx.state === "suspended") ctx.resume();
+      const t = ctx.currentTime + .05, D = 1.9;
+      const master = ctx.createGain();
+      master.gain.setValueAtTime(.0001, t);
+      master.gain.exponentialRampToValueAtTime(.6, t + .14);
+      master.gain.setValueAtTime(.6, t + .85);
+      master.gain.exponentialRampToValueAtTime(.0001, t + D);
+      const am = ctx.createGain(); am.gain.value = .75;
+      const amL = ctx.createOscillator(); amL.frequency.value = 28; const amG = ctx.createGain(); amG.gain.value = .25; amL.connect(amG).connect(am.gain);
+      const shaper = ctx.createWaveShaper(); const curve = new Float32Array(1024);
+      for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; curve[i] = Math.tanh(x * 4); } shaper.curve = curve;
+      const lp = ctx.createBiquadFilter(); lp.type = "lowpass"; lp.Q.value = 1.3;
+      lp.frequency.setValueAtTime(600, t); lp.frequency.linearRampToValueAtTime(1500, t + .35); lp.frequency.exponentialRampToValueAtTime(350, t + D);
+      [52, 55.5, 78].forEach((f, i) => {
+        const o = ctx.createOscillator(); o.type = "sawtooth";
+        o.frequency.setValueAtTime(f * .8, t); o.frequency.linearRampToValueAtTime(f * 1.25, t + .3); o.frequency.exponentialRampToValueAtTime(f * .65, t + D);
+        const l = ctx.createOscillator(); l.frequency.value = 19 + i * 6; const lg = ctx.createGain(); lg.gain.value = f * .14; l.connect(lg).connect(o.frequency);
+        const g = ctx.createGain(); g.gain.value = .32; o.connect(g).connect(shaper);
+        o.start(t); l.start(t); o.stop(t + D); l.stop(t + D);
+      });
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * D), ctx.sampleRate), ch = buf.getChannelData(0);
+      for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1;
+      const ns = ctx.createBufferSource(); ns.buffer = buf;
+      const bp = ctx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 850; bp.Q.value = .7;
+      const ng = ctx.createGain(); ng.gain.value = .55; ns.connect(bp).connect(ng).connect(lp);
+      shaper.connect(lp); lp.connect(am).connect(master).connect(ctx.destination);
+      ns.start(t); amL.start(t); amL.stop(t + D);
+    } catch (e) {}
+  }
+  const finaleEl = document.getElementById("final");
+  if (finaleEl && "IntersectionObserver" in window) {
+    const ro = new IntersectionObserver(es => es.forEach(e => {
+      if (e.isIntersecting && actx) { ro.disconnect(); setTimeout(roar, 600); }
+    }), { threshold: .35 });
+    ro.observe(finaleEl);
   }
 
   /* ---------- Opening sequence ---------- */
